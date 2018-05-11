@@ -13,6 +13,9 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.SeekBar;
 
+import com.example.mis.sensor.views.CustomView;
+
+import java.util.ArrayList;
 import java.util.Random;
 
 import static java.lang.Math.sqrt;
@@ -27,6 +30,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Sensor mAccelerometer;
     private final float NOISE = (float) 2.0;
 
+    ArrayList <AccelerometerViewData> xyzData = new ArrayList<AccelerometerViewData>();
+    CustomView accelerometerView;
 
     private MediaPlayer mMusic;
 
@@ -55,6 +60,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         setContentView(R.layout.activity_main);
         //initiate and fill example array with random values
 
+        accelerometerView = (CustomView) findViewById(R.id.xyzView);
         magnituedFFT = new double[wsize];
 
         // https://stackoverflow.com/questions/40740933/setting-timer-with-seek-bar
@@ -191,16 +197,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             double deltaX = Math.abs(xAxis - x);
             double deltaY = Math.abs(yAxis - y);
             double deltaZ = Math.abs(zAxis - z);
-            if (deltaX < NOISE) deltaX = (float)0.0;
-            if (deltaY < NOISE) deltaY = (float)0.0;
-            if (deltaZ < NOISE) deltaZ = (float)0.0;
+//            if (deltaX < NOISE) deltaX = (float)0.0;
+//            if (deltaY < NOISE) deltaY = (float)0.0;
+//            if (deltaZ < NOISE) deltaZ = (float)0.0;
             xAxis = x;
             yAxis = y;
             zAxis = z;
             magnitude = (double) sqrt(xAxis*xAxis + yAxis*yAxis + zAxis*zAxis);
         }
 
+        System.out.println("X" + xAxis);
+        System.out.println("Y" + yAxis);
+        System.out.println("Z" + zAxis);
         System.out.println("M" + magnitude);
+
+        xyzData.add(new AccelerometerViewData((float) xAxis, (float) yAxis, (float) zAxis));
+        if (xyzData.size() > 100){
+            xyzData.remove(0);
+        }
+        accelerometerView.SetAccelerometerData(xyzData);
+        
         if(magnituedFFT.length == wsize) {
             new FFTAsynctask(wsize).execute(magnituedFFT);
             magnitudeCounter = 0;
