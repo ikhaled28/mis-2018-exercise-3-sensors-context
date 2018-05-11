@@ -1,0 +1,8 @@
+// Mohammad Izabul Khaled - 119013
+// Tanveer Al Jami - 119118
+
+As we tested our thresholds based on our own activity where we found that for Jogging FFT peak is 350-600 and from location manager 
+the speed is around 0.4 - 2.0 meter/second. Unfourtunately due to lack of Cycle and Car we couldn't tested our values for those two parts,
+but as from our assumption is we used few peak values which we thought will be best for those to parts.
+
+Thanks.
