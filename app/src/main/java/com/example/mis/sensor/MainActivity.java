@@ -11,6 +11,7 @@ import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.widget.SeekBar;
 
 import com.example.mis.sensor.views.CustomView;
@@ -45,7 +46,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
     SeekBar sampleRateChanger;
-    private int sampleRate = 0;
+    private int sampleRate = 1000;
 
     SeekBar windowSizeChanger;
     private int wsize = 32;
@@ -65,8 +66,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         // https://stackoverflow.com/questions/40740933/setting-timer-with-seek-bar
         sampleRateChanger = (SeekBar) findViewById(R.id.seekBarSampleData);
-        sampleRateChanger.setMax(600);
-        sampleRateChanger.setProgress(30);
+        sampleRateChanger.setMax(20000);
+        sampleRateChanger.setProgress(1000);
 
 
         windowSizeChanger = (SeekBar) findViewById(R.id.seekBarWindowSize);
@@ -94,9 +95,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                int minutes = seekBar.getProgress() / 60;
-                int seconds = seekBar.getProgress() - minutes * 60;
-                sampleRate = seconds;
+//                int minutes = seekBar.getProgress() / 60;
+//                int seconds = seekBar.getProgress() - minutes * 60;
+                sampleRate = seekBar.getProgress();
+                if(sampleRate<1000){
+                    sampleRate=1000;
+                }
                 updateSampleSize(sampleRate);
             }
         });
@@ -138,9 +142,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
 
-    void updateSampleSize(int sampleRat){
+    void updateSampleSize(int sampleRate){
+
         mSensorManager.unregisterListener(this);
         mSensorManager.registerListener(this, mAccelerometer, sampleRate);
+        Log.d("Sample Rate", sampleRate + "");
     }
 
 
@@ -206,17 +212,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             magnitude = (double) sqrt(xAxis*xAxis + yAxis*yAxis + zAxis*zAxis);
         }
 
-        System.out.println("X" + xAxis);
-        System.out.println("Y" + yAxis);
-        System.out.println("Z" + zAxis);
-        System.out.println("M" + magnitude);
+//        System.out.println("X" + xAxis);
+//        System.out.println("Y" + yAxis);
+//        System.out.println("Z" + zAxis);
+//        System.out.println("M" + magnitude);
 
         xyzData.add(new AccelerometerViewData((float) xAxis, (float) yAxis, (float) zAxis));
         if (xyzData.size() > 100){
             xyzData.remove(0);
         }
         accelerometerView.SetAccelerometerData(xyzData);
-        
+
+
         if(magnituedFFT.length == wsize) {
             new FFTAsynctask(wsize).execute(magnituedFFT);
             magnitudeCounter = 0;
