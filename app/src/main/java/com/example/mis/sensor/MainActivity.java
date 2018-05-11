@@ -25,6 +25,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     //https://developer.android.com/guide/topics/sensors/sensors_motion
 
+    FFTAsynctask asynctask;
     private double xAxis, yAxis, zAxis,magnitude;
     private boolean mInitialized;
     private SensorManager mSensorManager;
@@ -46,7 +47,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
     SeekBar sampleRateChanger;
-    private int sampleRate = 1000;
+    private int sampleRate = 2000;
 
     SeekBar windowSizeChanger;
     private int wsize = 32;
@@ -66,13 +67,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         // https://stackoverflow.com/questions/40740933/setting-timer-with-seek-bar
         sampleRateChanger = (SeekBar) findViewById(R.id.seekBarSampleData);
-        sampleRateChanger.setMax(20000);
-        sampleRateChanger.setProgress(1000);
+        sampleRateChanger.setMax(40000);
+        sampleRateChanger.setProgress(2000);
 
 
         windowSizeChanger = (SeekBar) findViewById(R.id.seekBarWindowSize);
-        sampleRateChanger.setMax(2048);
-        sampleRateChanger.setProgress(wsize);
+        windowSizeChanger.setMax(2048);
+        windowSizeChanger.setProgress(wsize);
 
         mInitialized = false;
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -84,7 +85,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         sampleRateChanger.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-
+                sampleRate = seekBar.getProgress();
+                Log.d("Sample Rate", sampleRate + " " + seekBar.getProgress());
+                if(sampleRate<2000){
+                    sampleRate=2000;
+                }
 
             }
 
@@ -97,10 +102,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             public void onStopTrackingTouch(SeekBar seekBar) {
 //                int minutes = seekBar.getProgress() / 60;
 //                int seconds = seekBar.getProgress() - minutes * 60;
-                sampleRate = seekBar.getProgress();
-                if(sampleRate<1000){
-                    sampleRate=1000;
-                }
+
                 updateSampleSize(sampleRate);
             }
         });
@@ -196,7 +198,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             xAxis = x;
             yAxis = y;
             zAxis = z;
-            magnitude = (double) sqrt(xAxis*xAxis + yAxis*yAxis + zAxis*zAxis);
+            magnitude = (double) Math.sqrt(xAxis*xAxis + yAxis*yAxis + zAxis*zAxis);
             mInitialized = true;
 
         } else {
@@ -209,7 +211,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             xAxis = x;
             yAxis = y;
             zAxis = z;
-            magnitude = (double) sqrt(xAxis*xAxis + yAxis*yAxis + zAxis*zAxis);
+            magnitude = (double) Math.sqrt(xAxis*xAxis + yAxis*yAxis + zAxis*zAxis);
         }
 
 //        System.out.println("X" + xAxis);
@@ -224,12 +226,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         accelerometerView.SetAccelerometerData(xyzData);
 
 
-        if(magnituedFFT.length == wsize) {
+        magnituedFFT[magnitudeCounter] = magnitude;
+        magnitudeCounter++;
+
+        if(magnitudeCounter == wsize) {
             new FFTAsynctask(wsize).execute(magnituedFFT);
             magnitudeCounter = 0;
-        }else{
-            magnitudeCounter++;
-            magnituedFFT[magnitudeCounter] = magnitude;
+            magnituedFFT = new double[wsize];
         }
     }
 
@@ -290,9 +293,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
             //fill array with magnitude values of the distribution
-            for (int i = 0; wsize > i ; i++) {
+            for (int i = 0; i < wsize ; i++) {
                 magnitude[i] = sqrt(Math.pow(realPart[i], 2) + Math.pow(imagPart[i], 2));
+               // Log.d("fft", magnitude[i] + "");
+
             }
+
 
             return magnitude;
 
@@ -303,8 +309,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             //hand over values to global variable after background task is finished
             freqCounts = values;
             if(!isMusicPlaying){
+                isMusicPlaying = true;
                 playMusicFFT();
             }
+
         }
     }
 
@@ -325,33 +333,41 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         for (int i = 0; i< wsize; i++){
             if(freqCounts[i] > peakValue){
                 peakValue = freqCounts[i];
+//                Log.d("Sample Rate", sampleRate + " " + seekBar.getProgress());
+
             }
         }
 
-        if ( peakValue >= 0 && peakValue <=10){
-            if (locationSpeed >= 1.0 && locationSpeed <= 20.0){
-                if(!isMusicPlaying) {
-                    starMusic();
-                    isJogging = true;
-                    isCycling = false;
-                }
-            }
+        Log.d("Peak Value", sampleRate + " " + peakValue);
 
-        }else if ( peakValue >= 0 && peakValue <=10){
-            if (locationSpeed >= 1.0 && locationSpeed <= 20.0){
-                if (!isMusicPlaying) {
-                    starMusic();
-                    isCycling = true;
-                    isJogging = false;
-                }
-            }
-        }else {
-            //No Music Playing
-            if (isMusicPlaying) {
-                stopMusic();
-                isCycling = false;
-                isJogging = false;
-            }
-        }
+            //playMusicFFT();
+        starMusic();
+
+
+//        if ( peakValue >= 0 && peakValue <=10){
+//            if (locationSpeed >= 1.0 && locationSpeed <= 20.0){
+//                if(!isMusicPlaying) {
+//                    starMusic();
+//                    isJogging = true;
+//                    isCycling = false;
+//                }
+//            }
+//
+//        }else if ( peakValue >= 0 && peakValue <=10){
+//            if (locationSpeed >= 1.0 && locationSpeed <= 20.0){
+//                if (!isMusicPlaying) {
+//                    starMusic();
+//                    isCycling = true;
+//                    isJogging = false;
+//                }
+//            }
+//        }else {
+//            //No Music Playing
+//            if (isMusicPlaying) {
+//                stopMusic();
+//                isCycling = false;
+//                isJogging = false;
+//            }
+//        }
     }
 }

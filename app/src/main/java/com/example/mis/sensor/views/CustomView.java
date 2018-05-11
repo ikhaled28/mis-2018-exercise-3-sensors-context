@@ -23,6 +23,7 @@ public class CustomView extends View{
     Paint greenPaint = new Paint();
     Paint bluePaint = new Paint();
     Paint whitePaint = new Paint();
+    Paint blackPaint = new Paint();
 
     public CustomView(Context context) {
         super(context);
@@ -48,10 +49,10 @@ public class CustomView extends View{
     private void init(@Nullable AttributeSet attrs) {
             // Load attributes
 
-//        viewData.add(new AccelerometerViewData(10f,18f,.3f));
-//        viewData.add(new AccelerometerViewData(.0f,20f,.3f));
-//        viewData.add(new AccelerometerViewData(7f,-20f,22f));
-//        viewData.add(new AccelerometerViewData(.9f,2f,.3f));
+        viewData.add(new AccelerometerViewData(10f,18f,.3f));
+        viewData.add(new AccelerometerViewData(.0f,20f,.3f));
+        viewData.add(new AccelerometerViewData(7f,-20f,22f));
+        viewData.add(new AccelerometerViewData(.9f,2f,.3f));
 
         redPaint.setColor(Color.RED);
         redPaint.setStrokeWidth(5);
@@ -61,6 +62,7 @@ public class CustomView extends View{
         bluePaint.setStrokeWidth(5);
         whitePaint.setColor(Color.WHITE);
         whitePaint.setStrokeWidth(5);
+        blackPaint.setColor(Color.BLACK);
     }
 
     @Override
@@ -68,15 +70,22 @@ public class CustomView extends View{
 
         canvas.drawColor(Color.rgb(180,180,180));
 
+        float multiplier = 2;
+        float redY = getHeight() / 8f;
+        float greenY = 3 * getHeight() / 8f;
+        float blueY = 5 * getHeight() / 8f;
+        float whiteY = 7 * getHeight() / 8f;
+
+        canvas.drawLine(0, redY, getWidth(), redY, blackPaint);
+        canvas.drawLine(0, greenY, getWidth(), greenY, blackPaint);
+        canvas.drawLine(0, blueY, getWidth(), blueY, blackPaint);
+        canvas.drawLine(0, whiteY, getWidth(), whiteY, blackPaint);
+
         if(viewData.size() > 1) {
             float stepSizeX = (float) getWidth() / (float) (viewData.size() - 1);
             if(viewData.size() < 10)
                 stepSizeX = getWidth()/10f;
-            float multiplier = 2;
-            float redY = getHeight() / 8f;
-            float greenY = 3 * getHeight() / 8f;
-            float blueY = 5 * getHeight() / 8f;
-            float whiteY = 7 * getHeight() / 8f;
+
             for (int i = viewData.size() - 1; i > 0 ; i--) {
 
                 float startX = (viewData.size() - 1 - i) * stepSizeX;
