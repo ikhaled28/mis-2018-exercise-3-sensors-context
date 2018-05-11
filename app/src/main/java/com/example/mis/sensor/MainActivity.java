@@ -15,6 +15,7 @@ import android.util.Log;
 import android.widget.SeekBar;
 
 import com.example.mis.sensor.views.CustomView;
+import com.example.mis.sensor.views.FFTView;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -34,6 +35,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     ArrayList <AccelerometerViewData> xyzData = new ArrayList<AccelerometerViewData>();
     CustomView accelerometerView;
+    FFTView fftView;
 
     private MediaPlayer mMusic;
 
@@ -63,11 +65,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         //initiate and fill example array with random values
 
         accelerometerView = (CustomView) findViewById(R.id.xyzView);
+        fftView = (FFTView) findViewById(R.id.fftView);
         magnituedFFT = new double[wsize];
 
         // https://stackoverflow.com/questions/40740933/setting-timer-with-seek-bar
         sampleRateChanger = (SeekBar) findViewById(R.id.seekBarSampleData);
-        sampleRateChanger.setMax(40000);
+        sampleRateChanger.setMax(80000);
         sampleRateChanger.setProgress(2000);
 
 
@@ -308,6 +311,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         protected void onPostExecute(double[] values) {
             //hand over values to global variable after background task is finished
             freqCounts = values;
+            fftView.SetFFTData(values);
             if(!isMusicPlaying){
                 isMusicPlaying = true;
                 playMusicFFT();
