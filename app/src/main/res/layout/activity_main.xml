@@ -7,10 +7,16 @@
     tools:context=".MainActivity">
 
 
-    <LinearLayout
-        android:id="@+id/accView"
+    <SeekBar
+        android:id="@+id/seekBarSampleData"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <SeekBar
+        android:id="@+id/seekBarWindowSize"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"></LinearLayout>
+        app:layout_constraintTop_toBottomOf="@+id/seekBarSampleData"/>
 
 </android.support.constraint.ConstraintLayout>
