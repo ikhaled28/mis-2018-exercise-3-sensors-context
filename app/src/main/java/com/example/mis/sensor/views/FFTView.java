@@ -68,7 +68,6 @@ public class FFTView extends View{
             float stepSizeX = (float) getWidth() / (float) (fftData.length - 1);
 
             for (int i = fftData.length - 1; i > 0 ; i--) {
-                Log.d("FFTview",fftData[i] + "");
                 float startX = (fftData.length - 1 - i) * stepSizeX;
                 float endX = startX + stepSizeX;
                 float startYRed = redY - multiplier * (float) fftData[i];
@@ -83,6 +82,5 @@ public class FFTView extends View{
         this.fftData = fftData;
         isDataAvailable = true;
         invalidate();
-        Log.d("FFTviewCall", "Got Data");
     }
 }

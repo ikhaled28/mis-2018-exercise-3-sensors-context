@@ -1,5 +1,6 @@
 package com.example.mis.sensor;
 
+import android.Manifest;
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -7,12 +8,19 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
+import android.location.LocationManager;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.widget.SeekBar;
+import android.widget.TextView;
+import android.content.pm.PackageManager;
+import static android.location.LocationManager.GPS_PROVIDER;
+import android.widget.Toast;
+
 
 import com.example.mis.sensor.views.CustomView;
 import com.example.mis.sensor.views.FFTView;
@@ -26,7 +34,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     //https://developer.android.com/guide/topics/sensors/sensors_motion
 
-    FFTAsynctask asynctask;
+
+    LocationManager lm;
     private double xAxis, yAxis, zAxis,magnitude;
     private boolean mInitialized;
     private SensorManager mSensorManager;
@@ -56,7 +65,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private float locationSpeed = 0.0f;
 
-    private boolean isMusicPlaying = false;
+
+    private TextView sampleSizeText;
+    private TextView windowSizeText;
+
+    private float globalPeak = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,6 +97,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         mSensorManager.registerListener(this, mAccelerometer, sampleRate);
 
+        sampleSizeText = (TextView) findViewById(R.id.sampleSize);
+        windowSizeText = (TextView) findViewById(R.id.windowSize);
+        sampleSizeText.setText("Sample Size: " + sampleRate);
+        windowSizeText.setText("Window Size: " + wsize);
+
 
         sampleRateChanger.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -103,10 +121,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-//                int minutes = seekBar.getProgress() / 60;
-//                int seconds = seekBar.getProgress() - minutes * 60;
-
                 updateSampleSize(sampleRate);
+                sampleSizeText.setText("Sample Size: " + sampleRate);
             }
         });
 
@@ -140,10 +156,42 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     wsize = 2048;
                 }
                 magnitudeCounter = 0;
+                magnituedFFT = new double[wsize];
+                windowSizeText.setText("Window Size: " + wsize);
+
             }
         });
 
 
+        lm = (LocationManager) getSystemService(android.content.Context.LOCATION_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            return;
+        }
+        lm.requestLocationUpdates(GPS_PROVIDER,0,0,this);
+        this.onLocationChanged(null);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        for(String permission: permissions){
+            if(ActivityCompat.shouldShowRequestPermissionRationale(this, permission)){
+                //denied
+                Toast.makeText(this,"Location Access permission denied. Can't read the location speed.", Toast.LENGTH_LONG).show();
+
+            }else{
+                if(ActivityCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED){
+                    //allowed
+                    //startupScreen.setVisibility(View.GONE);
+                    Toast.makeText(this,"Location Access permission granted.", Toast.LENGTH_SHORT).show();
+
+                } else{
+                    //set to never ask again
+                    Toast.makeText(this,"Go to settings and accept location access permission.", Toast.LENGTH_LONG).show();
+                    //do something here.
+                }
+            }
+        }
     }
 
 
@@ -151,7 +199,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         mSensorManager.unregisterListener(this);
         mSensorManager.registerListener(this, mAccelerometer, sampleRate);
-        Log.d("Sample Rate", sampleRate + "");
     }
 
 
@@ -180,15 +227,22 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onAccuracyChanged(Sensor sensor, int i) {
     }
 
-    public void starMusic(){
+    public void startCyclingMusic(){
         mMusic = MediaPlayer.create(MainActivity.this,R.raw.music);
         mMusic.start();
-        isMusicPlaying = true;
     }
 
-    public void stopMusic(){
+    public void stopCyclingMusic(){
         mMusic.stop();
-        isMusicPlaying = false;
+    }
+
+    public void startJoggingMusic(){
+        mMusic = MediaPlayer.create(MainActivity.this,R.raw.jogging);
+        mMusic.start();
+    }
+
+    public void stopJoggingMusic(){
+        mMusic.stop();
     }
 
     private void getAccelerometer(SensorEvent sensorEvent) {
@@ -245,7 +299,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             locationSpeed = 0.0f;
         }else {
             locationSpeed = location.getSpeed();
+
         }
+
+
     }
 
     @Override
@@ -302,7 +359,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             }
 
-
             return magnitude;
 
         }
@@ -310,13 +366,61 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         @Override
         protected void onPostExecute(double[] values) {
             //hand over values to global variable after background task is finished
+
             freqCounts = values;
             fftView.SetFFTData(values);
-            if(!isMusicPlaying){
-                isMusicPlaying = true;
-                playMusicFFT();
+
+
+            double peakValue = 0;
+
+            for (int i = 0; i< wsize; i++){
+                if(freqCounts[i] > peakValue){
+                    peakValue = freqCounts[i];
+                }
             }
 
+            MusicDecision(peakValue);
+        }
+    }
+
+    void MusicDecision(double peakValue){
+
+        if ( peakValue >= 350 && peakValue <= 600 && locationSpeed >= 0.4 && locationSpeed <= 2.0){
+            // jogging
+            if(isCycling){
+                stopCyclingMusic();
+                isCycling = false;
+            }
+
+            if(!isJogging){
+                startJoggingMusic();
+                isJogging = true;
+            }
+
+        }else if(peakValue > 600 && peakValue <= 1500 && locationSpeed > 3.0f && locationSpeed <= 12.0){
+            // cycling
+
+            if(isJogging){
+                isJogging = false;
+                stopJoggingMusic();
+            }
+
+            if(!isCycling){
+                isCycling = true;
+                startCyclingMusic();
+            }
+
+        }else {
+            // high speed
+            if(isCycling){
+                isCycling = false;
+                stopCyclingMusic();
+            }
+
+            if(isJogging){
+                isJogging = false;
+                stopJoggingMusic();
+            }
         }
     }
 
@@ -324,54 +428,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     /**
      * little helper function to fill example with random double values
      */
-    public void randomFill(double[] array){
+    public void randomFill(double[] array) {
         Random rand = new Random();
-        for(int i = 0; array.length > i; i++){
+        for (int i = 0; array.length > i; i++) {
             array[i] = rand.nextDouble();
         }
-    }
-
-    void playMusicFFT(){
-        double peakValue = 0;
-
-        for (int i = 0; i< wsize; i++){
-            if(freqCounts[i] > peakValue){
-                peakValue = freqCounts[i];
-//                Log.d("Sample Rate", sampleRate + " " + seekBar.getProgress());
-
-            }
-        }
-
-        Log.d("Peak Value", sampleRate + " " + peakValue);
-
-            //playMusicFFT();
-        starMusic();
-
-
-//        if ( peakValue >= 0 && peakValue <=10){
-//            if (locationSpeed >= 1.0 && locationSpeed <= 20.0){
-//                if(!isMusicPlaying) {
-//                    starMusic();
-//                    isJogging = true;
-//                    isCycling = false;
-//                }
-//            }
-//
-//        }else if ( peakValue >= 0 && peakValue <=10){
-//            if (locationSpeed >= 1.0 && locationSpeed <= 20.0){
-//                if (!isMusicPlaying) {
-//                    starMusic();
-//                    isCycling = true;
-//                    isJogging = false;
-//                }
-//            }
-//        }else {
-//            //No Music Playing
-//            if (isMusicPlaying) {
-//                stopMusic();
-//                isCycling = false;
-//                isJogging = false;
-//            }
-//        }
     }
 }
